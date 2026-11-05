@@ -91,12 +91,15 @@ async function callProvider(messages: AiMessage[], mode: AiMode): Promise<string
   const timeoutMs = Number(process.env.AI_REQUEST_TIMEOUT_MS ?? "8000");
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const isGoogleProvider = /generativelanguage\.googleapis\.com|googleapis\.com/i.test(baseUrl);
 
   try {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        ...(isGoogleProvider
+          ? { "x-goog-api-key": apiKey }
+          : { Authorization: `Bearer ${apiKey}` }),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
