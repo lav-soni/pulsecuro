@@ -2,32 +2,34 @@
 
 Built by Team Byte Force.
 
-PulseCuro is an AI-powered health guidance platform designed to reduce uncertainty during urgent medical situations. The app helps users understand symptoms, receive structured triage guidance, locate nearby care options, and access medication and emergency support information quickly and clearly.
+PulseCuro is an AI-powered healthcare guidance platform designed to reduce uncertainty during urgent medical moments. It helps users understand symptoms, receive quick triage guidance, locate nearby care, and access medication support with clear and reassuring instructions.
 
 ## Problem We Solved
 
-A large number of users become overwhelmed when they experience sudden symptoms or need quick guidance but do not know whether they should call emergency services, seek urgent care, or consult a doctor. In healthcare moments, clarity and speed matter.
+When people face sudden symptoms or need urgent support, they often do not know whether to call emergency services, visit a hospital, or consult a doctor. PulseCuro reduces that uncertainty by combining a simple medical triage experience with resources and healthcare navigation.
 
 PulseCuro brings together:
 
-- AI-based symptom triage support
-- Emergency-first guidance
-- Nearby care navigation
-- Medical resource discovery
-- Medication explanations
+- AI-assisted symptom triage
+- Emergency-first response guidance
+- Nearby hospitals, doctors, and resources
+- Prescription explanation support
+- Low-cost generic medicine discovery through Jan Aushadhi-style affordability checks
+- Mobile-friendly glassmorphism interface
 
 ## Why This Matters
 
-Healthcare decisions can be stressful, especially when time is limited and information is fragmented. PulseCuro helps users make more informed decisions faster and directs them toward the right level of care without making the experience feel intimidating.
+Healthcare decisions are stressful, especially when time is limited and information feels fragmented. PulseCuro gives users a calmer, clearer first step toward the right care.
 
 ## Key Features
 
-- AI triage assistant for symptom-based guidance
+- AI triage assistant for urgent medical questions
+- ER handover summary generation from entered patient information
 - SOS and emergency response flow
-- Hospitals and doctors discovery experience
-- Directions and resource access
-- Medication explanation support
-- Clean, intuitive, mobile-friendly interface
+- Doctors, hospital, and direction discovery
+- Prescription AI to explain medicines in simple language
+- Generic medicine affordability check and low-cost alternatives
+- Smooth scroll-based reveal animations
 
 ## Team
 
@@ -35,16 +37,17 @@ Healthcare decisions can be stressful, especially when time is limited and infor
 
 ## Tech Stack
 
-- Next.js
+- Next.js 16
 - React
 - TypeScript
 - Tailwind CSS
-- NVIDIA AI integration
+- Groq + Gemini AI fallback
+- Liquid glass UI patterns
 
 ## Architecture Overview
 
 - Frontend: Next.js App Router
-- AI Layer: backend API routes and shared AI logic
+- AI Layer: backend API routes and shared configuration in `lib/ai.ts`
 - Runtime config: environment variables stored securely in `.env.local` locally and in deployment settings for production
 
 ## Local Development
@@ -60,12 +63,18 @@ npm install
 3. Add the required environment variables:
 
 ```env
-NVIDIA_AI_TRIAGE_API_KEY=your_api_key_here
-NVIDIA_AI_TRIAGE_BASE_URL=https://integrate.api.nvidia.com/v1
-NVIDIA_AI_TRIAGE_MODEL=deepseek-ai/deepseek-v4.1-flash
+AI_API_KEY=your_gemini_backup_key
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+AI_MODEL=gemini-2.5-flash
+AI_FALLBACK_MODELS=gemini-2.5-pro
+AI_REQUEST_TIMEOUT_MS=45000
+
+GROQ_API_KEY=your_groq_key
+GROQ_BASE_URL=https://api.groq.com/openai/v1
+GROQ_MODEL=openai/gpt-oss-20b
 ```
 
-> Keep `.env.local` local only. Never commit it.
+> Keep `.env.local` local only. Do not commit it.
 
 4. Run the app:
 
@@ -81,23 +90,26 @@ http://localhost:3000
 
 ## AI Integration
 
-The app uses NVIDIA-hosted AI via backend route handlers and shared logic in `lib/ai.ts`.
+The app uses a Groq-first provider strategy with Gemini as a fallback. The logic lives in `lib/ai.ts` and is exposed through the API route at `app/api/ai/route.ts`.
 
-The implementation includes fail-safe handling so users still receive a meaningful fallback response if the provider is unavailable.
+This setup prioritizes the working provider first and includes retry logic and graceful fallback messaging when live AI is unavailable.
 
-## Deployment Notes (Render)
+## Deployment Notes
 
-This project is ready for deployment to Render or similar hosting platforms.
+Before deploying, set the same environment variables in your hosting dashboard, for example Vercel, Render, or another Node-based deployment platform:
 
-Before deploying, set the same environment variables in your Render dashboard:
-
-- `NVIDIA_AI_TRIAGE_API_KEY`
-- `NVIDIA_AI_TRIAGE_BASE_URL`
-- `NVIDIA_AI_TRIAGE_MODEL`
+- `GROQ_API_KEY`
+- `GROQ_BASE_URL`
+- `GROQ_MODEL`
+- `AI_API_KEY`
+- `AI_BASE_URL`
+- `AI_MODEL`
+- `AI_FALLBACK_MODELS`
+- `AI_REQUEST_TIMEOUT_MS`
 
 ## Impact
 
-PulseCuro demonstrates how AI can support faster, more accessible healthcare decision-making while keeping the user experience simple, empathetic, and actionable.
+PulseCuro demonstrates how AI can support faster, more accessible healthcare decision-making while keeping the user experience empathetic, practical, and action-oriented.
 
 ## License
 
