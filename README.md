@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PulseCuro
 
-## Getting Started
+PulseCuro is a healthcare-focused web app built with Next.js. It combines AI-assisted triage, symptom guidance, emergency support flows, and healthcare resource discovery in a clean, mobile-friendly experience.
 
-First, run the development server:
+## Features
+
+- AI-powered symptom triage and health guidance
+- Emergency SOS flow
+- Doctor and hospital discovery pages
+- Prescription and medication explanation support
+- Resource and directions pages
+- Modern glassmorphism-inspired UI
+
+## Tech Stack
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Custom UI components
+
+## Local Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create a local environment file named `.env.local` in the project root.
+
+3. Add the required values:
+
+```env
+NVIDIA_AI_TRIAGE_API_KEY=your_api_key_here
+NVIDIA_AI_TRIAGE_BASE_URL=https://integrate.api.nvidia.com/v1
+NVIDIA_AI_TRIAGE_MODEL=deepseek-ai/deepseek-v4.1-flash
+```
+
+> Keep `.env.local` local only. Do not commit it to GitHub.
+
+4. Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. Open the app in your browser:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+http://localhost:3000
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## AI Integration
 
-## Learn More
+The app uses NVIDIA AI through a backend API route and a shared helper in `lib/ai.ts`.
 
-To learn more about Next.js, take a look at the following resources:
+If the external provider is unavailable, the app includes fallback behavior so it does not hang indefinitely.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Sensitive keys should be stored in the host environment or local development setup only.
+- Do not paste API keys into exported repo files.
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is for demo, learning, and development use.
