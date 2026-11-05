@@ -60,7 +60,7 @@ function buildFallbackResponse(mode: AiMode, prompt: string) {
 
   if (mode === "prescription") {
     return [
-      "I’m not connected to an AI provider yet, so I’m using a safe fallback explanation.",
+      "I'm not connected to an AI provider yet, so I'm using a safe fallback explanation.",
       cleanedPrompt
         ? `Medicine details shared: ${cleanedPrompt}`
         : "Add the medicine names or prescription text to get a structured explanation.",
@@ -70,7 +70,7 @@ function buildFallbackResponse(mode: AiMode, prompt: string) {
 
   if (mode === "triage") {
     return [
-      "I’m not connected to a live AI model yet, but based on the information shared, this may need urgent attention.",
+      "I'm not connected to a live AI model yet, but based on the information shared, this may need urgent attention.",
       cleanedPrompt
         ? `Symptoms described: ${cleanedPrompt}`
         : "Please describe the symptoms and how long they have been happening.",
@@ -86,63 +86,118 @@ function buildFallbackResponse(mode: AiMode, prompt: string) {
 }
 
 async function callProvider(messages: AiMessage[], mode: AiMode): Promise<string> {
-  const { apiKey, baseUrl, model } = readConfig();
+  const { apiKey, baseUrl, model: primaryModel } = readConfig();
 
   if (!apiKey) {
     const userPrompt = messages.filter((message) => message.role === "user").map((message) => message.content).join("\n");
     return buildFallbackResponse(mode, userPrompt);
   }
 
-  const endpoint = `${baseUrl}/chat/completions`;
-  const timeoutMs = Number(process.env.AI_REQUEST_TIMEOUT_MS ?? "8000");
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  const isGoogleProvider = /generativelanguage\.googleapis\.com|googleapis\.com/i.test(baseUrl);
+  const fallbackModels = (process.env.AI_FALLBACK_MODELS ?? "")
+    .split(",")
+    .map((modelName) => modelName.trim())
+    .filter(Boolean);
 
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        ...(isGoogleProvider
-          ? { "x-goog-api-key": apiKey }
-          : { Authorization: `Bearer ${apiKey}` }),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        temperature: 0.4,
-        messages: messages.map((message) => ({
-          role: message.role,
-          content: message.content,
-        })),
-      }),
-      signal: controller.signal,
-    });
+  const models = [primaryModel, ...fallbackModels.filter((modelName) => modelName !== primaryModel)];
+  let lastError: Error | null = null;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`AI request failed (${response.status}): ${errorText.slice(0, 300)}`);
+  for (const candidateModel of models) {
+    let modelFailed = false;
+
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const controller = new AbortController();
+      const timeoutMs = Number(process.env.AI_REQUEST_TIMEOUT_MS ?? "45000");
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: candidateModel,
+            messages: messages.map((message) => ({
+              role: message.role,
+              content: message.content,
+            })),
+          }),
+          signal: controller.signal,
+        });
+
+        if (response.status === 503 || response.status === 429) {
+          const errorText = await response.text().catch(() => "");
+          lastError = new Error(`AI request failed (${response.status}) on ${candidateModel}: ${errorText.slice(0, 200)}`);
+
+          if (attempt < 2) {
+            console.warn("[AI] retrying model:", candidateModel, "status:", response.status);
+            await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+            continue;
+          }
+
+          console.warn("[AI] switching model:", candidateModel, "status:", response.status);
+          modelFailed = true;
+          break;
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "");
+          lastError = new Error(`AI request failed (${response.status}) on ${candidateModel}: ${errorText.slice(0, 200)}`);
+          console.warn("[AI] switching model:", candidateModel, "status:", response.status);
+          modelFailed = true;
+          break;
+        }
+
+        const payload = (await response.json()) as {
+          choices?: Array<{ message?: { content?: string } }>;
+        };
+
+        // Temporary debug logging for provider responses; remove later if not needed.
+        console.log("[AI] raw payload:", JSON.stringify(payload).slice(0, 500));
+
+        const reply = payload.choices?.[0]?.message?.content?.trim();
+
+        if (!reply) {
+          lastError = new Error(`AI response was empty (${candidateModel}).`);
+          console.warn("[AI] switching model:", candidateModel, "reason: empty response");
+          modelFailed = true;
+          break;
+        }
+
+        return reply;
+      } catch (error) {
+        console.error("[AI] request failed:", error);
+
+        if (error instanceof Error && (error.name === "AbortError" || error.message.toLowerCase().includes("timed out"))) {
+          lastError = new Error(`AI request timed out after ${timeoutMs}ms on ${candidateModel}.`);
+          console.warn("[AI] switching model:", candidateModel, "reason: timeout");
+        } else {
+          const message = error instanceof Error ? error.message : String(error);
+          lastError = new Error(`AI request failed on ${candidateModel}: ${message}`);
+          console.warn("[AI] switching model:", candidateModel, "reason: network error");
+        }
+
+        modelFailed = true;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      if (modelFailed) {
+        break;
+      }
     }
 
-    const payload = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-
-    const reply = payload.choices?.[0]?.message?.content?.trim();
-
-    if (!reply) {
-      throw new Error("AI response was empty.");
+    if (modelFailed) {
+      continue;
     }
-
-    return reply;
-  } catch (error) {
-    if (error instanceof Error && (error.name === "AbortError" || error.message.toLowerCase().includes("timed out"))) {
-      throw new Error(`AI request timed out after ${timeoutMs}ms.`);
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
   }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  throw new Error(`AI request failed on ${primaryModel}.`);
 }
 
 export async function generateAIReply({
@@ -171,9 +226,10 @@ export async function generateAIReply({
   try {
     return await callProvider(finalMessages, mode);
   } catch (error) {
+    console.error("[AI] request failed:", error);
     const message = error instanceof Error ? error.message : "AI request failed.";
     return [
-      "The live AI request failed, so I’m using the safe fallback guidance.",
+      "The live AI request failed, so I'm using the safe fallback guidance.",
       message,
       buildFallbackResponse(mode, incomingPrompt || (normalizedMessages.at(-1)?.content ?? "")),
     ].join("\n\n");
