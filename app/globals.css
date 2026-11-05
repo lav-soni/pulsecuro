@@ -320,12 +320,12 @@ input.glass-input {
 }
 
 button.bg-white,
-button[class*="bg-white"] {
+button[class~="bg-white"] {
   color: #0f172a !important;
 }
 
 button.bg-white svg,
-button[class*="bg-white"] svg {
+button[class~="bg-white"] svg {
   color: #0f172a !important;
 }
 

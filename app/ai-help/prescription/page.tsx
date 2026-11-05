@@ -68,7 +68,7 @@ export default function PrescriptionPage() {
               appearance="light"
               mode="frost"
               refraction={20}
-              className="group min-h-[280px] cursor-pointer p-10 text-center"
+              className="group min-h-[280px] cursor-pointer p-10 text-center transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_24px_44px_rgba(15,10,40,0.22)]"
               style={{
                 borderRadius: 20,
                 background: "linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))",
@@ -78,7 +78,7 @@ export default function PrescriptionPage() {
               <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 transition-colors group-hover:bg-white/15"><Upload size={22} className="text-white" strokeWidth={1.8} /></div>
               <p className="mb-1.5 font-serif text-[18px] font-medium text-white">Upload photo of prescription</p>
               <p className="mb-5 text-[13px] text-white/70">JPG, PNG or PDF · max 10 MB</p>
-              <span className="inline-flex items-center justify-center rounded-full bg-white px-5 py-2.5 text-[13px] font-medium text-slate-900 transition-all hover:bg-violet-600 hover:text-white">Choose file</span>
+              <span className="btn-secondary inline-flex items-center justify-center rounded-full px-5 py-2.5 text-[13px] font-medium">Choose file</span>
               <input type="file" className="hidden" accept="image/*,.pdf" />
             </LiquidGlass>
             <LiquidGlass
@@ -105,7 +105,7 @@ export default function PrescriptionPage() {
                 type="button"
                 onClick={handleExplain}
                 disabled={isLoading}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-3.5 text-[14px] font-medium text-slate-900 transition-all hover:bg-violet-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-5 py-3.5 text-[14px] font-medium disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
                 {isLoading ? "Explaining..." : "Explain"}
@@ -117,6 +117,32 @@ export default function PrescriptionPage() {
 
       <section className="pb-20">
         <div className="mx-auto max-w-[1200px] px-6 md:px-10">
+          <ScrollReveal className="mb-8" duration={0.8} yOffset={20}>
+            <LiquidGlass
+              material="clear"
+              appearance="light"
+              mode="frost"
+              refraction={20}
+              className="p-5 md:p-6 transition-all duration-500 hover:-translate-y-1"
+              style={{
+                borderRadius: 20,
+                background: "linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))",
+                boxShadow: "0 18px 40px rgba(15, 10, 40, 0.18)",
+              }}
+            >
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/60">Jan Aushadhi check</p>
+                  <h2 className="font-serif text-[24px] md:text-[30px] font-medium tracking-tight text-white">Affordable generic option available</h2>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/30 bg-emerald-400/10 px-3 py-1.5 text-[12px] font-medium text-emerald-100">
+                  <Check size={14} />
+                  Save up to ₹210/month
+                </div>
+              </div>
+            </LiquidGlass>
+          </ScrollReveal>
+
           <ScrollReveal className="flex items-center justify-between mb-8" duration={0.8} yOffset={20}>
             <div><h2 className="font-serif text-[28px] md:text-[36px] font-medium tracking-tight text-white">Medicines explained</h2><p className="text-[14px] text-white/70 mt-1">3 medicines · from your prescription</p></div>
             <DemoBadge />
@@ -194,8 +220,12 @@ export default function PrescriptionPage() {
             <div className="flex items-start gap-3"><AlertCircle size={18} className="mt-0.5 flex-shrink-0 text-amber-200" /><p className="text-[14px] leading-relaxed text-white/80">Always confirm with your doctor or pharmacist. PulseCuro does not change your dosage.</p></div>
           </LiquidGlass>
           <div className="flex flex-wrap gap-3">
-            <button className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3.5 text-[14px] font-medium text-slate-900 transition-all hover:bg-violet-600 hover:text-white"><Save size={14} /> Save to my device</button>
-            <button className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-6 py-3.5 text-[14px] font-medium text-white transition-all hover:border-violet-300/60 hover:bg-violet-500/20"><MessageCircle size={14} /> Ask a follow-up question</button>
+            <button className="btn-primary inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[14px] font-medium">
+              <Save size={14} /> Save to my device
+            </button>
+            <button className="btn-secondary inline-flex items-center justify-center gap-2 rounded-full px-6 py-3.5 text-[14px] font-medium">
+              <MessageCircle size={14} /> Ask a follow-up question
+            </button>
           </div>
           </ScrollReveal>
         </div>
