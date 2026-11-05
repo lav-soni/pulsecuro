@@ -294,32 +294,34 @@ export default function Home() {
                 )}
               </div>
 
-              <form onSubmit={handleHomeChatSend} className="flex items-center gap-3 rounded-full border border-white/20 bg-white/8 px-3 py-2 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_30px_rgba(15,10,40,0.18)] backdrop-blur-md">
+              <form onSubmit={handleHomeChatSend} className="flex flex-col gap-2 rounded-[24px] border border-white/20 bg-white/8 p-2 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_18px_30px_rgba(15,10,40,0.18)] backdrop-blur-md sm:flex-row sm:items-center sm:gap-3 sm:rounded-full sm:p-2">
                 <input
                   type="text"
                   value={symptomInput}
                   onChange={(e) => setSymptomInput(e.target.value)}
                   placeholder="Describe your symptoms..."
-                  className="flex-1 border-0 bg-transparent px-3 py-3 text-[16px] text-white placeholder:text-white/70 focus:outline-none"
+                  className="w-full flex-1 border-0 bg-transparent px-3 py-3 text-[16px] text-white placeholder:text-white/70 focus:outline-none"
                 />
-                <button
-                  aria-label="Start voice conversation"
-                  className="group shrink-0 h-12 w-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 hover:bg-violet-600 hover:text-white active:translate-y-1 active:scale-100 active:bg-violet-700"
-                  type="button"
-                >
-                  <Mic size={18} className="transition-transform duration-200 text-current group-hover:scale-110 group-hover:!text-white" />
-                </button>
-                <button
-                  aria-label="Send message"
-                  disabled={!symptomInput.trim() || isAiChatLoading}
-                  className="group shrink-0 w-24 h-12 rounded-[18px] bg-white text-black flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 hover:bg-violet-600 hover:text-white active:translate-y-1 active:scale-100 active:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  type="submit"
-                >
-                  <ArrowUp
-                    size={20}
-                    className="transition-transform duration-200 text-current group-hover:-translate-y-1 group-hover:!text-white"
-                  />
-                </button>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <button
+                    aria-label="Start voice conversation"
+                    className="group shrink-0 h-12 w-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 hover:bg-violet-600 hover:text-white active:translate-y-1 active:scale-100 active:bg-violet-700"
+                    type="button"
+                  >
+                    <Mic size={18} className="transition-transform duration-200 text-current group-hover:scale-110 group-hover:!text-white" />
+                  </button>
+                  <button
+                    aria-label="Send message"
+                    disabled={!symptomInput.trim() || isAiChatLoading}
+                    className="group shrink-0 w-full h-12 rounded-[18px] bg-white text-black flex items-center justify-center shadow-lg transition-all duration-200 hover:scale-105 hover:-translate-y-0.5 hover:bg-violet-600 hover:text-white active:translate-y-1 active:scale-100 active:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-24"
+                    type="submit"
+                  >
+                    <ArrowUp
+                      size={20}
+                      className="transition-transform duration-200 text-current group-hover:-translate-y-1 group-hover:!text-white"
+                    />
+                  </button>
+                </div>
               </form>
             </div>
 
