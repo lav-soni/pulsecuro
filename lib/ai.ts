@@ -15,7 +15,7 @@ const systemPrompts: Record<AiMode, string> = {
 };
 
 function readConfig() {
-  const apiKey =
+  const genericApiKey =
     process.env.AI_API_KEY ??
     process.env.GOOGLE_API_KEY ??
     process.env.GEMINI_API_KEY ??
@@ -24,7 +24,7 @@ function readConfig() {
     process.env.NVIDIA_AI_TRIAGE_API_KEY ??
     "";
 
-  const baseUrl = (
+  const genericBaseUrl = (
     process.env.AI_BASE_URL ??
     process.env.GOOGLE_AI_BASE_URL ??
     process.env.GEMINI_BASE_URL ??
@@ -32,14 +32,48 @@ function readConfig() {
     "https://integrate.api.nvidia.com/v1"
   ).replace(/\/$/, "");
 
-  const model =
+  const genericModel =
     process.env.AI_MODEL ??
     process.env.GEMINI_MODEL ??
     process.env.GOOGLE_MODEL ??
     process.env.NVIDIA_AI_TRIAGE_MODEL ??
     "deepseek-ai/deepseek-v4.1-flash";
 
-  return { apiKey, baseUrl, model };
+  const groqApiKey = process.env.GROQ_API_KEY ?? genericApiKey;
+  const groqBaseUrl = (process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1").replace(/\/$/, "");
+  const groqModel = process.env.GROQ_MODEL ?? "openai/gpt-oss-20b";
+
+  const geminiApiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY ?? genericApiKey;
+  const geminiBaseUrl = (
+    process.env.GEMINI_BASE_URL ??
+    process.env.GOOGLE_AI_BASE_URL ??
+    "https://generativelanguage.googleapis.com/v1beta/openai"
+  ).replace(/\/$/, "");
+
+  const gemini25Model = process.env.GEMINI_2_5_MODEL ?? "gemini-2.5-flash";
+  const geminiProModel = process.env.GEMINI_PRO_MODEL ?? "gemini-2.5-pro";
+
+  const providers = [
+    { key: groqApiKey, baseUrl: groqBaseUrl, model: groqModel, label: "groq" },
+    { key: geminiApiKey, baseUrl: geminiBaseUrl, model: gemini25Model, label: "gemini-2.5-flash" },
+    { key: geminiApiKey, baseUrl: geminiBaseUrl, model: geminiProModel, label: "gemini-2.5-pro" },
+  ];
+
+  const preferredModels = [
+    groqModel,
+    gemini25Model,
+    geminiProModel,
+    genericModel,
+    ...((process.env.AI_FALLBACK_MODELS ?? "").split(",").map((value) => value.trim()).filter(Boolean)),
+  ].filter((value, index, array) => value && array.indexOf(value) === index);
+
+  return {
+    apiKey: genericApiKey,
+    baseUrl: genericBaseUrl,
+    model: genericModel,
+    providers,
+    preferredModels,
+  };
 }
 
 function normalizeMessages(messages?: AiMessage[]): AiMessage[] {
@@ -86,22 +120,17 @@ function buildFallbackResponse(mode: AiMode, prompt: string) {
 }
 
 async function callProvider(messages: AiMessage[], mode: AiMode): Promise<string> {
-  const { apiKey, baseUrl, model: primaryModel } = readConfig();
+  const { providers, preferredModels } = readConfig();
+  const availableProviders = providers.filter((provider) => Boolean(provider.key && provider.baseUrl && provider.model));
 
-  if (!apiKey) {
+  if (!availableProviders.length) {
     const userPrompt = messages.filter((message) => message.role === "user").map((message) => message.content).join("\n");
     return buildFallbackResponse(mode, userPrompt);
   }
 
-  const fallbackModels = (process.env.AI_FALLBACK_MODELS ?? "")
-    .split(",")
-    .map((modelName) => modelName.trim())
-    .filter(Boolean);
-
-  const models = [primaryModel, ...fallbackModels.filter((modelName) => modelName !== primaryModel)];
   let lastError: Error | null = null;
 
-  for (const candidateModel of models) {
+  for (const candidate of availableProviders) {
     let modelFailed = false;
 
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -110,14 +139,14 @@ async function callProvider(messages: AiMessage[], mode: AiMode): Promise<string
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const response = await fetch(`${baseUrl}/chat/completions`, {
+        const response = await fetch(`${candidate.baseUrl}/chat/completions`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${candidate.key}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: candidateModel,
+            model: candidate.model,
             messages: messages.map((message) => ({
               role: message.role,
               content: message.content,
@@ -128,23 +157,23 @@ async function callProvider(messages: AiMessage[], mode: AiMode): Promise<string
 
         if (response.status === 503 || response.status === 429) {
           const errorText = await response.text().catch(() => "");
-          lastError = new Error(`AI request failed (${response.status}) on ${candidateModel}: ${errorText.slice(0, 200)}`);
+          lastError = new Error(`AI request failed (${response.status}) on ${candidate.model}: ${errorText.slice(0, 200)}`);
 
           if (attempt < 2) {
-            console.warn("[AI] retrying model:", candidateModel, "status:", response.status);
+            console.warn("[AI] retrying provider:", candidate.label, "model:", candidate.model, "status:", response.status);
             await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
             continue;
           }
 
-          console.warn("[AI] switching model:", candidateModel, "status:", response.status);
+          console.warn("[AI] switching provider:", candidate.label, "model:", candidate.model, "status:", response.status);
           modelFailed = true;
           break;
         }
 
         if (!response.ok) {
           const errorText = await response.text().catch(() => "");
-          lastError = new Error(`AI request failed (${response.status}) on ${candidateModel}: ${errorText.slice(0, 200)}`);
-          console.warn("[AI] switching model:", candidateModel, "status:", response.status);
+          lastError = new Error(`AI request failed (${response.status}) on ${candidate.model}: ${errorText.slice(0, 200)}`);
+          console.warn("[AI] switching provider:", candidate.label, "model:", candidate.model, "status:", response.status);
           modelFailed = true;
           break;
         }
@@ -153,14 +182,13 @@ async function callProvider(messages: AiMessage[], mode: AiMode): Promise<string
           choices?: Array<{ message?: { content?: string } }>;
         };
 
-        // Temporary debug logging for provider responses; remove later if not needed.
-        console.log("[AI] raw payload:", JSON.stringify(payload).slice(0, 500));
+        console.log("[AI] provider:", candidate.label, "model:", candidate.model, "payload:", JSON.stringify(payload).slice(0, 500));
 
         const reply = payload.choices?.[0]?.message?.content?.trim();
 
         if (!reply) {
-          lastError = new Error(`AI response was empty (${candidateModel}).`);
-          console.warn("[AI] switching model:", candidateModel, "reason: empty response");
+          lastError = new Error(`AI response was empty (${candidate.model}).`);
+          console.warn("[AI] switching provider:", candidate.label, "model:", candidate.model, "reason: empty response");
           modelFailed = true;
           break;
         }
@@ -170,12 +198,12 @@ async function callProvider(messages: AiMessage[], mode: AiMode): Promise<string
         console.error("[AI] request failed:", error);
 
         if (error instanceof Error && (error.name === "AbortError" || error.message.toLowerCase().includes("timed out"))) {
-          lastError = new Error(`AI request timed out after ${timeoutMs}ms on ${candidateModel}.`);
-          console.warn("[AI] switching model:", candidateModel, "reason: timeout");
+          lastError = new Error(`AI request timed out after ${timeoutMs}ms on ${candidate.model}.`);
+          console.warn("[AI] switching provider:", candidate.label, "model:", candidate.model, "reason: timeout");
         } else {
           const message = error instanceof Error ? error.message : String(error);
-          lastError = new Error(`AI request failed on ${candidateModel}: ${message}`);
-          console.warn("[AI] switching model:", candidateModel, "reason: network error");
+          lastError = new Error(`AI request failed on ${candidate.model}: ${message}`);
+          console.warn("[AI] switching provider:", candidate.label, "model:", candidate.model, "reason: network error");
         }
 
         modelFailed = true;
@@ -197,7 +225,7 @@ async function callProvider(messages: AiMessage[], mode: AiMode): Promise<string
     throw lastError;
   }
 
-  throw new Error(`AI request failed on ${primaryModel}.`);
+  throw new Error(`AI request failed on preferred models: ${preferredModels.join(", ") || "configured providers"}.`);
 }
 
 export async function generateAIReply({
