@@ -16,21 +16,27 @@ const systemPrompts: Record<AiMode, string> = {
 
 function readConfig() {
   const apiKey =
-    process.env.NVIDIA_AI_TRIAGE_API_KEY ??
     process.env.AI_API_KEY ??
+    process.env.GOOGLE_API_KEY ??
+    process.env.GEMINI_API_KEY ??
     process.env.OPENAI_API_KEY ??
     process.env.OPENROUTER_API_KEY ??
+    process.env.NVIDIA_AI_TRIAGE_API_KEY ??
     "";
 
   const baseUrl = (
-    process.env.NVIDIA_AI_TRIAGE_BASE_URL ??
     process.env.AI_BASE_URL ??
+    process.env.GOOGLE_AI_BASE_URL ??
+    process.env.GEMINI_BASE_URL ??
+    process.env.NVIDIA_AI_TRIAGE_BASE_URL ??
     "https://integrate.api.nvidia.com/v1"
   ).replace(/\/$/, "");
 
   const model =
-    process.env.NVIDIA_AI_TRIAGE_MODEL ??
     process.env.AI_MODEL ??
+    process.env.GEMINI_MODEL ??
+    process.env.GOOGLE_MODEL ??
+    process.env.NVIDIA_AI_TRIAGE_MODEL ??
     "deepseek-ai/deepseek-v4.1-flash";
 
   return { apiKey, baseUrl, model };
