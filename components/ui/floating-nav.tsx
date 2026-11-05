@@ -51,7 +51,7 @@ function FloatingNav({
   const [open, setOpen] = React.useState(false)
   const reduce = useReducedMotion()
   const id = React.useId()
-  useMotionValueEvent(scrollY, "change", (y) => setTucked(y > 40))
+  useMotionValueEvent(scrollY, "change", (y: number) => setTucked(y > 40))
   const spring = reduce ? { duration: 0 } : { type: "spring" as const, bounce: 0.16, duration: 0.5 }
 
   return (
